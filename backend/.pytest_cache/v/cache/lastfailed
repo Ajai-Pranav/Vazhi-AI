@@ -1,0 +1,4 @@
+{
+  "tests/test_auth.py::test_get_profile_and_update": true,
+  "tests/test_roadmaps.py::test_save_and_get_roadmap": true
+}
