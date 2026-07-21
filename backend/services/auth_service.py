@@ -164,7 +164,7 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         value=access_token,
         httponly=True,
         secure=COOKIE_SECURE,
-        samesite="strict",
+        samesite="none",
         max_age=ACCESS_COOKIE_MAX_AGE,
         path="/",
     )
@@ -173,7 +173,7 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         value=refresh_token,
         httponly=True,
         secure=COOKIE_SECURE,
-        samesite="strict",
+        samesite="none",
         max_age=REFRESH_COOKIE_MAX_AGE,
         path="/auth/refresh",   # Scoped — only sent to the refresh endpoint
     )
@@ -181,8 +181,8 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
 
 def clear_auth_cookies(response) -> None:
     """Clear both auth cookies (used on logout)."""
-    response.delete_cookie("access_token",  path="/",            samesite="strict")
-    response.delete_cookie("refresh_token", path="/auth/refresh", samesite="strict")
+    response.delete_cookie("access_token",  path="/",            samesite="none")
+    response.delete_cookie("refresh_token", path="/auth/refresh", samesite="none")
 
 
 # ── Dependency: resolve current authenticated user ────────────────────────────

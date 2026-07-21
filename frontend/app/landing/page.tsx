@@ -142,7 +142,7 @@ function Navbar() {
 
         {/* CTA buttons */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
           <Link
             href="/auth/login"
             className="hidden sm:block px-4 py-2 rounded-xl text-sm font-semibold no-underline transition-all duration-200"
