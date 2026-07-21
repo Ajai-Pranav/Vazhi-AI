@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
+import RouteGuard from "@/components/auth/RouteGuard";
 
 export const metadata: Metadata = {
   title: "Vazhi AI — Career Guidance",
@@ -26,7 +27,9 @@ export default function RootLayout({
         <div className="grid-pattern-overlay" />
         {/* Providers */}
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <RouteGuard>{children}</RouteGuard>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
