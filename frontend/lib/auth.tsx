@@ -54,7 +54,10 @@ const AuthContext = createContext<AuthContextType>({
   updateUser: () => {},
 });
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_URL =
+  typeof window !== "undefined"
+    ? "/api"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * Perform an authenticated fetch with automatic silent token refresh.
