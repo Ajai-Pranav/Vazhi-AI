@@ -18,6 +18,7 @@ const MENU_ITEMS = [
 const RESOURCE_ITEMS = [
   { icon: "⊕", label: "Explore Paths", path: "/suggestions" },
   { icon: "◉", label: "Mentors",       path: "/mentors" },
+  { icon: "📚", label: "Study Material", path: "/study-material" },
 ];
 
 export default function MentorsPage() {
