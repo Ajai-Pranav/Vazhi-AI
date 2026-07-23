@@ -615,7 +615,7 @@ For new_roadmap (unconfirmed):
 For new_roadmap_confirmed:
 - Set needs_info to true if you need their goals/preferences
 - Or set new_roadmap_requirements to a summary object if you have enough info:
-  {"title": "...", "description": "...", "duration_weeks": N, "experience_level": "...", "dream_job": "..."}
+  {{"title": "...", "description": "...", "duration_weeks": N, "experience_level": "...", "dream_job": "..."}}
 """
 
 
