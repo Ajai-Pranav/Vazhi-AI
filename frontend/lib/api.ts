@@ -17,10 +17,17 @@ import {
   StudyMaterialRequest, StudyMaterialResponse, StudyMaterialListItem,
 } from "@/types";
 
-const API_URL =
-  typeof window !== "undefined"
-    ? "/api"
-    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// NOTE: We call the backend directly (not via Next.js rewrites()).
+// Routing through Next's rewrite proxy means every request runs inside a
+// Vercel serverless function, which has a hard execution timeout (10s on
+// the Hobby plan). Slow AI endpoints (e.g. /chat/explore-paths, which can
+// make one or two LLM calls back-to-back) exceed that and get killed,
+// returning an HTML timeout page that breaks JSON parsing client-side.
+// Calling the backend directly avoids that extra hop entirely.
+// Cookies are already configured for cross-origin use (SameSite=None; Secure),
+// so this works as long as ALLOWED_ORIGINS on the backend includes this
+// frontend's deployed origin.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ── Core fetch wrapper with silent refresh ────────────────────────────────────
 
