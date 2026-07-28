@@ -325,6 +325,9 @@ export default function StudyMaterialPage() {
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  // Info banner shown when arriving from the Day Plan "Generate Study Material"
+  // button but the selected day had no topics to preload.
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
 
   // Form Inputs
   const [topics, setTopics] = useState<string[]>([]);
@@ -347,6 +350,34 @@ export default function StudyMaterialPage() {
     }
     if (user) {
       loadHistory();
+
+      // Auto-fill Education Level from the logged-in user's profile, unless
+      // the user has already typed something into the field themselves.
+      // Prefer their actual course (e.g. "B.Tech") over the generic
+      // educational status, falling back through field/status for users
+      // who don't have a course on file (professionals, job seekers).
+      setEducationLevel(
+        (prev) => prev || user.course || user.field || user.educational_status || ""
+      );
+
+      // One-time prefill from the Day Plan "Generate Study Material" button
+      // (consumeStudyMaterialPrefill returns the payload once, then clears
+      // it, so revisiting this page later won't re-apply stale topics).
+      const prefill = store.consumeStudyMaterialPrefill();
+      if (prefill) {
+        if (prefill.topics && prefill.topics.length > 0) {
+          // The topic input form supports up to 5 topics — keep the first 5
+          // so we don't silently exceed the existing limit.
+          setTopics(prefill.topics.slice(0, 5));
+          setPrefillNotice(null);
+        } else {
+          setPrefillNotice(
+            "No study topics were found for this roadmap day yet. Feel free to add topics manually below."
+          );
+        }
+        setDifficulty("Intermediate");
+        setOutputLength("Medium");
+      }
     }
   }, [authLoading, user]);
 
@@ -818,6 +849,15 @@ export default function StudyMaterialPage() {
                     <p className="text-sm text-gray-400 mb-6" style={{ color: "var(--text3)" }}>
                       Input one or more topics below. Our AI will compile an exhaustive study manual, including practical examples, misconceptions, key takeaways, and test questions.
                     </p>
+
+                    {prefillNotice && (
+                      <div
+                        className="text-sm p-3 rounded-xl mb-5"
+                        style={{ background: "var(--accent-light)", color: "var(--accent)", border: "0.5px solid var(--accent-glow)" }}
+                      >
+                        ℹ️ {prefillNotice}
+                      </div>
+                    )}
 
                     <form onSubmit={handleGenerate} className="flex flex-col gap-5">
                       {/* Topic Tags Input */}

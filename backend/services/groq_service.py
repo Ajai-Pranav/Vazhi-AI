@@ -126,6 +126,50 @@ def _sanitize_day_links(data: dict) -> dict:
     return data
 
 
+def _dedupe_practice_problems(outline: list) -> list:
+    """
+    Deterministic safety net so no practice problem (e.g. a LeetCode/HackerRank
+    question) is assigned to more than one day across the whole roadmap.
+
+    The outline prompt already instructs the LLM not to repeat problems across
+    days, but for long roadmaps (many weeks = many days, each needing 2 unique
+    problems) LLMs occasionally repeat a well-known question (e.g. "Two Sum")
+    by mistake. Since the entire outline — and therefore every day's
+    suggested_problems — is generated in this one pass, we can walk the days
+    in order here and drop any problem whose normalized title already
+    appeared on an earlier day, before it's ever stored or shown to the user.
+
+    This intentionally does not invent a replacement problem (that would risk
+    fabricating something inaccurate) — a day may end up with 1 problem
+    instead of 2 rather than a duplicate, which is the safer trade-off.
+    """
+    seen: set[str] = set()
+    removed = 0
+    for day in outline:
+        if not isinstance(day, dict):
+            continue
+        problems = day.get("suggested_problems") or []
+        unique_problems = []
+        for p in problems:
+            if not isinstance(p, dict):
+                continue
+            title = (p.get("problem") or "").strip().lower()
+            key = re.sub(r"\s+", " ", title)
+            if not key:
+                continue
+            if key in seen:
+                removed += 1
+                continue
+            seen.add(key)
+            unique_problems.append(p)
+        day["suggested_problems"] = unique_problems
+
+    if removed:
+        logger.info("DEDUPE_PRACTICE_PROBLEMS | removed=%d duplicate problem(s) across roadmap outline", removed)
+
+    return outline
+
+
 @groq_retry
 async def generate_suggestions(profile: StudentProfile) -> SuggestionsResponse:
     """Generate personalized career suggestions using domain-specific prompt."""
@@ -215,6 +259,10 @@ async def generate_roadmap_outline(
 
     # Validate each item matches the schema
     TypeAdapter(list[RoadmapOutlineItem]).validate_python(data)
+
+    # Deterministic backstop: strip any practice problem repeated across days
+    data = _dedupe_practice_problems(data)
+
     return data
 
 

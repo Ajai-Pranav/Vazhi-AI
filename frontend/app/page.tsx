@@ -94,6 +94,7 @@ export default function DashboardPage() {
   // Navigation loading states so buttons show feedback before page transition
   const [navLoading, setNavLoading] = useState(false);
   const [quizNavLoading, setQuizNavLoading] = useState(false);
+  const [studyMaterialNavLoading, setStudyMaterialNavLoading] = useState(false);
   // Tracks which sidebar day tab is currently loading so it shows a spinner immediately on click
   const [loadingDayNum, setLoadingDayNum] = useState<number | null>(null);
 
@@ -461,6 +462,17 @@ export default function DashboardPage() {
     setCheckedProblems((prev) =>
       prev.includes(problem) ? prev.filter((p) => p !== problem) : [...prev, problem]
     );
+  };
+
+  // Send this day's study topics to the Study Material generator and
+  // navigate there. Topics are handed off via the in-memory `store` (same
+  // pattern used for career suggestions/profile) so no backend call is
+  // needed — the day's topics are already loaded on this page.
+  const handleGenerateStudyMaterial = () => {
+    if (studyMaterialNavLoading) return;
+    setStudyMaterialNavLoading(true);
+    store.setStudyMaterialPrefill({ topics: dayDetails?.topics || [] });
+    router.push("/study-material");
   };
 
   const handleSaveProgress = async () => {
@@ -896,7 +908,29 @@ export default function DashboardPage() {
 
                     {/* Topics checklist */}
                     <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "0.5px solid var(--border)" }}>
-                      <h3 className="text-base font-extrabold mb-4" style={{ fontFamily: "var(--font-syne)" }}>Study Topics & Syllabus</h3>
+                      <div className="flex items-center justify-between mb-4 gap-3">
+                        <h3 className="text-base font-extrabold" style={{ fontFamily: "var(--font-syne)" }}>Study Topics & Syllabus</h3>
+                        <button
+                          onClick={handleGenerateStudyMaterial}
+                          disabled={studyMaterialNavLoading}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white border-none cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
+                          style={{ background: "var(--accent)", boxShadow: "var(--shadow-accent)", opacity: studyMaterialNavLoading ? 0.8 : 1 }}
+                        >
+                          {studyMaterialNavLoading ? (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 10,
+                                height: 10,
+                                border: "2px solid rgba(255,255,255,0.35)",
+                                borderTopColor: "#fff",
+                                borderRadius: "50%",
+                                animation: "spin 0.7s linear infinite",
+                              }}
+                            />
+                          ) : "📚"} {studyMaterialNavLoading ? "Loading…" : "Generate Study Material"}
+                        </button>
+                      </div>
                       <div className="flex flex-col gap-3">
                         {dayDetails.topics?.map((topic, idx) => {
                           const isChecked = checkedTopics.includes(topic);

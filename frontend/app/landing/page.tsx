@@ -82,8 +82,12 @@ function Navbar() {
     { label: "Features", href: "#features" },
     { label: "How It Works", href: "#how-it-works" },
     { label: "Benefits", href: "#benefits" },
+    { label: "Demo Course", href: "/demo-course" },
     { label: "FAQ", href: "#faq" },
   ];
+  // In-page anchors (#...) scroll on the current page; route links (starting
+  // with "/") navigate to a different page — Demo Course needs the latter.
+  const isRouteLink = (href: string) => href.startsWith("/");
 
   return (
     <motion.nav
@@ -123,21 +127,37 @@ function Navbar() {
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-sm font-bold transition-colors duration-200 no-underline"
-              style={{
-                color: "var(--text)",
-                fontFamily: "var(--font-syne)",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--text)")}
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            isRouteLink(link.href) ? (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="text-sm font-bold transition-colors duration-200 no-underline"
+                style={{
+                  color: "var(--text)",
+                  fontFamily: "var(--font-syne)",
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "var(--accent)")}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "var(--text)")}
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm font-bold transition-colors duration-200 no-underline"
+                style={{
+                  color: "var(--text)",
+                  fontFamily: "var(--font-syne)",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--accent)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--text)")}
+              >
+                {link.label}
+              </a>
+            )
+          )}
         </div>
 
         {/* CTA buttons */}
@@ -208,17 +228,29 @@ function Navbar() {
             className="md:hidden px-6 pb-4 flex flex-col gap-3"
             style={{ background: "var(--header-bg)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--border)" }}
           >
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-sm font-bold no-underline py-2"
-                style={{ color: "var(--text)", fontFamily: "var(--font-syne)" }}
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              isRouteLink(link.href) ? (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm font-bold no-underline py-2"
+                  style={{ color: "var(--text)", fontFamily: "var(--font-syne)" }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm font-bold no-underline py-2"
+                  style={{ color: "var(--text)", fontFamily: "var(--font-syne)" }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <div className="flex gap-3 mt-2">
               <Link href="/auth/login" className="flex-1 text-center py-2 rounded-xl text-sm font-semibold no-underline" style={{ border: "1px solid var(--border2)", color: "var(--text2)", fontFamily: "var(--font-syne)" }}>Log In</Link>
               <Link href="/auth/signup" className="flex-1 text-center py-2 rounded-xl text-sm font-bold text-white no-underline" style={{ background: "var(--accent)", fontFamily: "var(--font-syne)" }}>Sign Up</Link>
@@ -1352,7 +1384,7 @@ function Footer() {
   };
 
   return (
-    <footer className="pt-20 pb-10 relative" style={{ borderTop: "1px solid var(--border)" }}>
+    <footer className="pt-20 pb-10 relative" style={{ borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-16">
           {/* Brand */}

@@ -28,6 +28,7 @@ const PUBLIC_PATHS = [
   "/get-started",
   "/home",
   "/landing",
+  "/demo-course",
   "/",
 ];
 
