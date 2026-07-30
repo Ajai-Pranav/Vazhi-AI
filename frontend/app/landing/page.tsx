@@ -455,7 +455,7 @@ function HeroSection() {
                 className="flex-1 mx-6 h-6 rounded-lg flex items-center px-4 text-xs"
                 style={{ background: "var(--surface3)", color: "var(--text3)", fontFamily: "var(--font-dm)" }}
               >
-                app.VazhiAI.io/home
+                app.VazhiAI.in/home
               </div>
             </div>
 
@@ -797,9 +797,9 @@ function HowItWorksSection() {
 
 // ─── Stats Section ────────────────────────────────────────────────────────────
 const STATS = [
-  { value: 12000, suffix: "+", label: "Roadmaps Generated", color: "var(--accent)" },
+  { value: 100, suffix: "+", label: "Roadmaps Generated", color: "var(--accent)" },
   { value: 95, suffix: "%", label: "User Satisfaction Rate", color: "var(--teal)" },
-  { value: 50000, suffix: "+", label: "Study Guides Created", color: "var(--gold)" },
+  { value: 500, suffix: "+", label: "Study Guides Created", color: "var(--gold)" },
   { value: 3, suffix: "x", label: "Faster Career Progress", color: "var(--rose)" },
 ];
 
