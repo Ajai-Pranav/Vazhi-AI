@@ -181,7 +181,7 @@ class OnboardingData(Base):
     __tablename__ = "onboarding_data"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, unique=True, index=True)
     profession = Column(String, nullable=False)
     data = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

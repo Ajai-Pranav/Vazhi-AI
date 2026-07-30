@@ -180,6 +180,10 @@ def verify_otp(
 
     user = _get_user_by_email(db, email)
     if not user:
+        # Equalise response timing with the known-email/wrong-OTP path below
+        # (which does DB lookups + this same dummy hash cost) so response
+        # time can't be used to enumerate registered emails.
+        hash_password("dummy_timing_equaliser_VazhiAI")
         logger.warning(
             "OTP_VERIFY_UNKNOWN_EMAIL | ip=%s | email=%s",
             request.client.host, email,
@@ -285,6 +289,8 @@ def reset_password(
 
     user = _get_user_by_email(db, email)
     if not user:
+        # Same timing-equalisation rationale as verify_otp above.
+        hash_password("dummy_timing_equaliser_VazhiAI")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP.",

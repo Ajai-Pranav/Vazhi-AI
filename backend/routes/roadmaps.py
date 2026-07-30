@@ -230,6 +230,17 @@ async def save_progress(
     db: Session = Depends(get_db),
     current_user: db_models.User = Depends(get_current_user),
 ):
+    # If a roadmap_id was supplied, verify the current user actually owns it
+    # before trusting it as a foreign key — otherwise a client could attach
+    # their progress row to another user's roadmap_id unchecked.
+    if body.roadmap_id is not None:
+        owned_roadmap = db.query(db_models.Roadmap).filter(
+            db_models.Roadmap.id == body.roadmap_id,
+            db_models.Roadmap.user_id == current_user.id,
+        ).first()
+        if not owned_roadmap:
+            raise HTTPException(status_code=404, detail="Roadmap not found")
+
     # Upsert by date
     existing = db.query(db_models.DailyProgress).filter(
         db_models.DailyProgress.user_id == current_user.id,
@@ -324,11 +335,14 @@ async def get_roadmap_day(
     Fetch day details. If details aren't generated yet, schedules generation
     in the background and returns a 202 status indicating 'processing'.
     """
+    # Row-level lock: two concurrent requests for the same day must not both
+    # read days_status, both see "not processing", and both schedule a
+    # background generation task for the same day.
     roadmap = db.query(db_models.Roadmap).filter(
         db_models.Roadmap.user_id == current_user.id,
         db_models.Roadmap.is_active == True,
         db_models.Roadmap.is_confirmed == True,
-    ).first()
+    ).with_for_update().first()
     if not roadmap:
         raise HTTPException(status_code=404, detail="No confirmed active roadmap found")
 

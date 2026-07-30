@@ -23,6 +23,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
+
 load_dotenv()
 
 logger = logging.getLogger("VazhiAI.email")
@@ -33,7 +38,9 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
-SMTP_FROM = os.environ.get("SMTP_FROM", "ajaibusiness1@gmail.com")
+# No hardcoded personal address — fall back to the configured sender account,
+# and only that, so nothing ships with someone's personal inbox as a default.
+SMTP_FROM = os.environ.get("SMTP_FROM") or SMTP_USER
 
 
 # ── Email templates ───────────────────────────────────────────────────────────
@@ -60,7 +67,7 @@ def _build_otp_email_html(otp_code: str) -> str:
           <tr>
             <td style="background:#1a1a1a;padding:28px 36px;">
               <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-                Path<span style="color:#c05a2e;">AI</span>
+                Vazhi<span style="color:#c05a2e;">AI</span>
               </span>
             </td>
           </tr>
@@ -162,14 +169,26 @@ def _send_smtp(to_email: str, subject: str, html_body: str, otp_code: str) -> No
                 server.sendmail(SMTP_FROM, [to_email], msg.as_string())
 
         logger.info("EMAIL_SENT | to=%s | subject=%s", to_email, subject)
-    except smtplib.SMTPAuthenticationError:
+    except smtplib.SMTPAuthenticationError as exc:
         logger.error("EMAIL_AUTH_FAILED | to=%s — Check SMTP_USER and SMTP_PASS (use App Password for Gmail)", to_email)
+        if sentry_sdk:
+            sentry_sdk.capture_exception(exc)
+        # NOTE: this runs in a background thread (see _dispatch_in_thread), so
+        # the API response has already been sent — re-raising here only
+        # surfaces the failure to logs/Sentry, not to the caller. This is
+        # intentional (forgot-password must not leak whether an email exists
+        # or whether delivery succeeded), but it does mean delivery failures
+        # are ops-visible only, with no user-facing signal or automatic retry.
         raise
     except smtplib.SMTPException as exc:
         logger.error("EMAIL_SMTP_ERROR | to=%s | error=%s", to_email, str(exc))
+        if sentry_sdk:
+            sentry_sdk.capture_exception(exc)
         raise
     except Exception as exc:
         logger.error("EMAIL_UNEXPECTED_ERROR | to=%s | error=%s", to_email, str(exc))
+        if sentry_sdk:
+            sentry_sdk.capture_exception(exc)
         raise
 
 

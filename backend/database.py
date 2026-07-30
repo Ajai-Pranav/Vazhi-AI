@@ -20,6 +20,7 @@ engine = create_engine(
     pool_recycle=300,
     pool_size=5,
     max_overflow=10,
+    pool_timeout=30,  # seconds to wait for a connection before raising, made explicit
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -95,6 +96,14 @@ def create_tables():
             data JSON NOT NULL DEFAULT '{}',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
         );""",
+        # Enforce one onboarding_data row per user (matches the ORM's
+        # uselist=False one-to-one relationship). NOTE: Postgres has no
+        # "ADD CONSTRAINT IF NOT EXISTS" — this fails (and is safely swallowed
+        # by the per-statement try/except below) on every run after the first,
+        # AND on the first run too if duplicate user_id rows already exist in
+        # this database. If that happens, the constraint silently will not be
+        # applied until the duplicates are manually deduplicated.
+        "ALTER TABLE onboarding_data ADD CONSTRAINT onboarding_data_user_id_key UNIQUE (user_id);",
         "ALTER TABLE roadmaps ADD COLUMN IF NOT EXISTS is_confirmed BOOLEAN DEFAULT FALSE;",
         "ALTER TABLE roadmaps ADD COLUMN IF NOT EXISTS duration_weeks INTEGER;",
         "ALTER TABLE roadmaps ADD COLUMN IF NOT EXISTS experience_level VARCHAR;",

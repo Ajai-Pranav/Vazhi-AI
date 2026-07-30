@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
+from apscheduler.schedulers.background import BackgroundScheduler
 from routes.auth import router as auth_router
 from routes.suggestions import router as suggestions_router
 from routes.onboarding import router as onboarding_router
@@ -15,6 +16,7 @@ from routes.resume import router as resume_router
 from routes.recovery import router as recovery_router
 from routes.study_material import router as study_material_router
 from limiter import limiter, rate_limit_handler
+from services.cleanup_service import cleanup_expired_tokens_and_otps
 
 import sentry_sdk
 from logging_config import setup_logging
@@ -32,6 +34,13 @@ if SENTRY_DSN:
 setup_logging()
 logger = logging.getLogger("VazhiAI.main")
 
+# ── Environment ────────────────────────────────────────────────────────────────
+# Set ENVIRONMENT=production in your deployment's env vars to disable the
+# public interactive API docs (Swagger UI / ReDoc / raw OpenAPI schema).
+# Defaults to keeping docs enabled (current behavior) so nothing changes
+# unless you explicitly opt in.
+IS_PRODUCTION = os.environ.get("ENVIRONMENT", "development").lower() == "production"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,10 +53,27 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables and columns checked/created successfully.")
     except Exception as e:
         logger.error(f"Failed to check/create database tables on startup: {e}")
+
+    # ── Scheduled cleanup: expired/revoked refresh tokens & password-reset
+    # OTPs, run daily in a background thread inside this same process (see
+    # services/cleanup_service.py). No external scheduler/queue required.
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        cleanup_expired_tokens_and_otps,
+        trigger="cron",
+        hour=3,
+        minute=0,
+        id="cleanup_expired_tokens_and_otps",
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("Scheduled daily token/OTP cleanup job (03:00 server time).")
+
     logger.info("VazhiAI backend started — version 3.0.0")
 
     yield
 
+    scheduler.shutdown(wait=False)
     logger.info("VazhiAI backend shutting down.")
 
 
@@ -56,6 +82,9 @@ app = FastAPI(
     description="Personalized career guidance AI for all domains — powered by Groq",
     version="3.0.0",
     lifespan=lifespan,
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 # ── Rate limiter setup (slowapi) ──────────────────────────────────────────────

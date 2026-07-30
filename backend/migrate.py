@@ -8,7 +8,8 @@ Usage:
     python migrate.py current    # Show current migration revision
     python migrate.py history    # Show migration history
 
-This script should be run from E:/VazhiAI_v2_broad/backend/ directory.
+This script should be run from the `backend/` directory of the project
+(the same directory as alembic.ini), on any OS.
 """
 
 import sys

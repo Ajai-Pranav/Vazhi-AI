@@ -21,6 +21,9 @@ slowapi==0.1.9
 # Reliability & Retries
 tenacity==8.4.1
 
+# Scheduled background jobs (in-process cron for token/OTP cleanup)
+apscheduler==3.10.4
+
 # Monitoring & Logging
 sentry-sdk[fastapi]==2.7.1
 

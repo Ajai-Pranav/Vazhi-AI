@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -81,7 +81,7 @@ class BroadOnboardingRequest(BaseModel):
     custom_goal: Optional[str] = None
     experience_level: str
     confusion: Optional[str] = None
-    tech_stack: Optional[List[str]] = []
+    tech_stack: Optional[List[str]] = Field(default_factory=list)
     age: Optional[int] = None
     # Student-specific
     college: Optional[str] = None
@@ -93,12 +93,12 @@ class BroadOnboardingRequest(BaseModel):
     years_of_experience: Optional[int] = None
     current_role: Optional[str] = None
     # Profile extension data
-    known_tools: Optional[List[str]] = []
-    target_skills: Optional[List[str]] = []
-    interests: Optional[List[str]] = []
-    certifications_done: Optional[List[str]] = []
-    certifications_target: Optional[List[str]] = []
-    extra_data: Optional[Dict[str, Any]] = {}
+    known_tools: Optional[List[str]] = Field(default_factory=list)
+    target_skills: Optional[List[str]] = Field(default_factory=list)
+    interests: Optional[List[str]] = Field(default_factory=list)
+    certifications_done: Optional[List[str]] = Field(default_factory=list)
+    certifications_target: Optional[List[str]] = Field(default_factory=list)
+    extra_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -176,7 +176,7 @@ class StudentProfile(BaseModel):
     course: Optional[str] = None
     current_year: Optional[int] = None
     total_years: Optional[int] = None
-    tech_stack: Optional[List[str]] = []
+    tech_stack: Optional[List[str]] = Field(default_factory=list)
     dream_job: str
     confusion: Optional[str] = None
     # Broad fields
@@ -210,8 +210,8 @@ class RoadmapCreate(BaseModel):
     title: str
     description: Optional[str] = None
     why_this_fits_user: Optional[str] = None
-    required_skills: List[str] = []
-    roadmap_steps: List[str] = []
+    required_skills: List[str] = Field(default_factory=list)
+    roadmap_steps: List[str] = Field(default_factory=list)
     estimated_timeline: Optional[str] = None
     difficulty: Optional[str] = None
 
@@ -231,11 +231,11 @@ class RoadmapResponse(BaseModel):
     experience_level: Optional[str] = None
     available_time: Optional[str] = None
     learning_pace: Optional[str] = None
-    outline: List = []
+    outline: List = Field(default_factory=list)
     detailed_days: Optional[dict] = None
     generation_status: Optional[str] = "completed"
     generation_error: Optional[str] = None
-    days_status: Optional[dict] = {}
+    days_status: Optional[dict] = Field(default_factory=dict)
     created_at: Optional[datetime] = None
     user_field: Optional[str] = None
     user_educational_status: Optional[str] = None
@@ -251,8 +251,8 @@ class DailyProgressCreate(BaseModel):
     date: str
     roadmap_id: Optional[str] = None
     day_number: Optional[int] = None
-    completed_tasks: List[str] = []
-    solved_problems: List[str] = []
+    completed_tasks: List[str] = Field(default_factory=list)
+    solved_problems: List[str] = Field(default_factory=list)
     notes: Optional[str] = None
 
 
@@ -346,7 +346,7 @@ class DayRoadmapDetails(BaseModel):
     practice: List[PracticeProblem]
     mcqTest: List[MCQQuestion]
     codingAssignment: Optional[str] = None
-    revisionTasks: Optional[List[str]] = []
+    revisionTasks: Optional[List[str]] = Field(default_factory=list)
 
 
 class TestSubmitRequest(BaseModel):

@@ -163,6 +163,7 @@ def refresh_tokens(request: Request, db: Session = Depends(get_db)):
 # ── POST /auth/logout ─────────────────────────────────────────────────────────
 
 @router.post("/logout")
+@limiter.limit("10/minute")
 def logout(
     request: Request,
     db: Session = Depends(get_db),

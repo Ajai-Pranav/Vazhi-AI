@@ -58,6 +58,15 @@ async function apiFetch(path: string, init: RequestInit = {}): Promise<Response>
 }
 
 async function handleResponse(res: Response, fallbackMessage: string) {
+  // 204 No Content (and other empty-body responses) have no JSON to parse —
+  // attempting it throws, so short-circuit before touching res.json().
+  if (res.status === 204) {
+    if (!res.ok) {
+      throw new Error(fallbackMessage);
+    }
+    return undefined;
+  }
+
   let data;
   try {
     data = await res.json();
