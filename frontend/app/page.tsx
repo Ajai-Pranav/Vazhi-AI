@@ -443,9 +443,9 @@ export default function DashboardPage() {
         available_time: availableTime,
         learning_pace: learningPace,
       });
-      
+
       // Start polling status
-      pollRoadmapOutline((res as any).roadmap_id);
+      pollRoadmapOutline(res.roadmap_id);
     } catch (err) {
       alert("Failed to start customize outline generation. Please try again.");
       setOutlineGenerating(false);

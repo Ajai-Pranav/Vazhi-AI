@@ -1,10 +1,13 @@
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger("VazhiAI.database")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
@@ -31,8 +34,25 @@ def get_db():
 
 
 def create_tables():
-    """Create all tables and run safe migrations on startup."""
+    """Create all tables and run safe migrations on startup.
+
+    The inline `migrations` list below uses PostgreSQL-specific DDL
+    (`ADD COLUMN IF NOT EXISTS`, `TIMESTAMP WITH TIME ZONE`, partial indexes,
+    etc.) and is only meaningful against a PostgreSQL database. It is skipped
+    entirely on any other dialect (e.g. the SQLite database used in tests)
+    to avoid relying on silent per-statement failures. `Base.metadata.create_all`
+    below still runs on every dialect and is what tests rely on.
+    """
     from sqlalchemy import text
+
+    if engine.dialect.name != "postgresql":
+        logger.info(
+            "Skipping inline PostgreSQL migrations (dialect=%s); "
+            "relying on Base.metadata.create_all instead.",
+            engine.dialect.name,
+        )
+        Base.metadata.create_all(bind=engine)
+        return
 
     migrations = [
         # ── Broad user profile columns on users table ──────────────────────
@@ -43,6 +63,7 @@ def create_tables():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS current_company VARCHAR;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS years_of_experience INTEGER;",
         'ALTER TABLE users ADD COLUMN IF NOT EXISTS "current_role" VARCHAR;',
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS dream_job VARCHAR;",
         # ── UserProfile extension table ────────────────────────────────────
         """CREATE TABLE IF NOT EXISTS user_profiles (
             id VARCHAR PRIMARY KEY,

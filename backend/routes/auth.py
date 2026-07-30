@@ -13,7 +13,11 @@ Cookie-based auth flow:
 
 Security:
   ✓ Rate limiting on login (10/min) and signup (5/hour)
-  ✓ HTTP-Only, Secure, SameSite=Strict cookies (XSS-safe)
+  ✓ HTTP-Only, Secure cookies (XSS-safe). NOTE: currently set with
+    SameSite=None (not Strict) to support cross-site frontend/backend
+    deployments; CSRF is only mitigated via the CORS origin allowlist today
+    (see services/auth_service.py set_auth_cookies). A dedicated CSRF token
+    is recommended as defense-in-depth — tracked separately.
   ✓ Short-lived access token (30 min) + long-lived refresh token (30 days)
   ✓ Server-side refresh token revocation on logout
   ✓ Refresh token rotation (old token invalidated on every refresh)

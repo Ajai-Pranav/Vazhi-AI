@@ -33,6 +33,7 @@ groq_retry = retry(
     retry=retry_if_exception_type((
         json.JSONDecodeError,
         ValidationError,
+        ValueError,
         GroqError
     )),
     stop=stop_after_attempt(3),
@@ -252,10 +253,7 @@ async def generate_roadmap_outline(
         if isinstance(data, dict) and "outline" in data:
             data = data["outline"]
         else:
-            raise ValidationError.from_exception_data(
-                "Roadmap outline response must be a JSON array.",
-                line_errors=[]
-            )
+            raise ValueError("Roadmap outline response must be a JSON array.")
 
     # Validate each item matches the schema
     TypeAdapter(list[RoadmapOutlineItem]).validate_python(data)
@@ -390,10 +388,7 @@ async def explore_paths_chat(
 
     # Basic validations
     if not isinstance(data, dict) or "reply" not in data or "intent" not in data:
-        raise ValidationError.from_exception_data(
-            "Explore paths response is missing required fields (reply/intent).",
-            line_errors=[]
-        )
+        raise ValueError("Explore paths response is missing required fields (reply/intent).")
     return data
 
 

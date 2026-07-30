@@ -179,12 +179,21 @@ export async function confirmActiveRoadmap() {
   return handleResponse(res, "Confirm failed");
 }
 
+// The backend returns 202 Accepted with this shape immediately, then
+// generates the outline in the background (see getDayDetails polling).
+// It does NOT return a RoadmapOutlineResponse — that was a type mismatch.
+export interface RoadmapGenerationStartedResponse {
+  message: string;
+  roadmap_id: string;
+  generation_status: string;
+}
+
 export async function confirmAndCustomizeRoadmap(config: {
   duration_weeks: number;
   experience_level: string;
   available_time: string;
   learning_pace: string;
-}): Promise<RoadmapOutlineResponse> {
+}): Promise<RoadmapGenerationStartedResponse> {
   const res = await apiFetch("/roadmaps/active/confirm-custom", {
     method: "POST",
     body: JSON.stringify(config),

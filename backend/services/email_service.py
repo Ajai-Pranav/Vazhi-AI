@@ -125,7 +125,7 @@ def _build_otp_email_html(otp_code: str) -> str:
 
 # ── Core send function ────────────────────────────────────────────────────────
 
-def _send_smtp(to_email: str, subject: str, html_body: str) -> None:
+def _send_smtp(to_email: str, subject: str, html_body: str, otp_code: str) -> None:
     """
     Establish SMTP connection and dispatch the email.
     This is the blocking I/O call — always run via _dispatch_in_thread.
@@ -138,8 +138,7 @@ def _send_smtp(to_email: str, subject: str, html_body: str) -> None:
     # Attach both plain-text fallback and rich HTML
     plain = (
         f"VazhiAI Password Reset\n\n"
-        f"Your OTP is: {html_body[-12:-2].strip() if 'monospace' not in html_body else ''}\n"
-        f"(Copy this from the HTML email for best results)\n\n"
+        f"Your OTP is: {otp_code}\n\n"
         f"This OTP expires in 10 minutes and can only be used once."
     )
     msg.attach(MIMEText(plain, "plain"))
@@ -174,14 +173,14 @@ def _send_smtp(to_email: str, subject: str, html_body: str) -> None:
         raise
 
 
-def _dispatch_in_thread(to_email: str, subject: str, html_body: str) -> None:
+def _dispatch_in_thread(to_email: str, subject: str, html_body: str, otp_code: str) -> None:
     """
     Fire-and-forget email dispatch in a daemon thread so the API
     response is never delayed by SMTP I/O.
     """
     t = threading.Thread(
         target=_send_smtp,
-        args=(to_email, subject, html_body),
+        args=(to_email, subject, html_body, otp_code),
         daemon=True,
     )
     t.start()
@@ -207,5 +206,5 @@ def send_otp_email(to_email: str, otp_code: str) -> None:
 
     subject = "🔐 Your VazhiAI Password Reset OTP"
     html_body = _build_otp_email_html(otp_code)
-    _dispatch_in_thread(to_email, subject, html_body)
+    _dispatch_in_thread(to_email, subject, html_body, otp_code)
     logger.info("EMAIL_QUEUED | to=%s", to_email)

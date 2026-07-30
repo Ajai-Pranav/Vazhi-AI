@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,10 +32,30 @@ if SENTRY_DSN:
 setup_logging()
 logger = logging.getLogger("VazhiAI.main")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # NOTE: DB migrations (alembic upgrade head) are run via migrate.py
+    # BEFORE the server starts (see start.bat / start.sh).
+    # Running Alembic inside the async startup event blocks the event loop.
+    try:
+        from database import create_tables
+        create_tables()
+        logger.info("Database tables and columns checked/created successfully.")
+    except Exception as e:
+        logger.error(f"Failed to check/create database tables on startup: {e}")
+    logger.info("VazhiAI backend started — version 3.0.0")
+
+    yield
+
+    logger.info("VazhiAI backend shutting down.")
+
+
 app = FastAPI(
     title="VazhiAI Backend",
     description="Personalized career guidance AI for all domains — powered by Groq",
-    version="3.0.0"
+    version="3.0.0",
+    lifespan=lifespan,
 )
 
 # ── Rate limiter setup (slowapi) ──────────────────────────────────────────────
@@ -81,20 +102,6 @@ app.include_router(chat_router)
 app.include_router(resume_router)
 app.include_router(recovery_router)
 app.include_router(study_material_router)
-
-
-@app.on_event("startup")
-def on_startup():
-    # NOTE: DB migrations (alembic upgrade head) are run via migrate.py
-    # BEFORE the server starts (see start.bat / start.sh).
-    # Running Alembic inside the async startup event blocks the event loop.
-    try:
-        from database import create_tables
-        create_tables()
-        logger.info("Database tables and columns checked/created successfully.")
-    except Exception as e:
-        logger.error(f"Failed to check/create database tables on startup: {e}")
-    logger.info("VazhiAI backend started — version 3.0.0")
 
 
 @app.get("/")

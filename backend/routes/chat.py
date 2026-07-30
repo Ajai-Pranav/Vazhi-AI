@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
+import logging
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from models.schemas import StudentProfile, CareerSuggestion, ChatMessageResponse, ChatMessageCreate
@@ -8,25 +9,29 @@ from database import get_db
 import db_models
 import json
 import re
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from limiter import limiter
 
+logger = logging.getLogger("VazhiAI.chat")
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 class ChatMessageInput(BaseModel):
     role: str
-    content: str
+    content: str = Field(..., max_length=4000)
 
 class ChatRefineRequest(BaseModel):
     profile: StudentProfile
     history: List[ChatMessageInput]
-    message: str
+    message: str = Field(..., max_length=4000)
 
 class ChatRefineResponse(BaseModel):
     reply: str
     suggestions: Optional[List[CareerSuggestion]] = None
 
 @router.post("/refine-suggestions", response_model=ChatRefineResponse)
+@limiter.limit("10/minute")
 async def refine_suggestions(
+    request: Request,
     body: ChatRefineRequest,
     current_user: db_models.User = Depends(get_current_user),
 ):
@@ -123,39 +128,42 @@ Expected JSON structure:
         return ChatRefineResponse(**data)
         
     except json.JSONDecodeError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to parse AI response as JSON: {str(e)}"
-        )
+        logger.exception("CHAT_REFINE_JSON_PARSE_FAILED | user_id=%s | error=%s", current_user.id, repr(e))
+        raise HTTPException(status_code=500, detail="Failed to process AI response. Please try again.")
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error in chat refinement: {str(e)}"
-        )
+        logger.exception("CHAT_REFINE_FAILED | user_id=%s | error=%s", current_user.id, repr(e))
+        raise HTTPException(status_code=500, detail="Failed to refine suggestions. Please try again.")
 
 
 @router.get("/history", response_model=List[ChatMessageResponse])
 async def get_chat_history(
     session_id: Optional[str] = None,
+    limit: int = 200,
     db: Session = Depends(get_db),
     current_user: db_models.User = Depends(get_current_user),
 ):
+    limit = max(1, min(limit, 200))
     query = db.query(db_models.ChatMessage).filter(
         db_models.ChatMessage.user_id == current_user.id
     )
     if session_id:
         query = query.filter(db_models.ChatMessage.session_id == session_id)
-    return query.order_by(db_models.ChatMessage.created_at.asc()).all()
+    # Fetch most recent `limit` messages, then restore ascending order for display
+    recent = query.order_by(db_models.ChatMessage.created_at.desc()).limit(limit).all()
+    recent.reverse()
+    return recent
 
 
 class UserMessageInput(BaseModel):
-    message: str
+    message: str = Field(..., max_length=4000)
     session_id: Optional[str] = None
     day_number: Optional[int] = None
 
 
 @router.post("/message", response_model=ChatMessageResponse)
+@limiter.limit("20/minute")
 async def send_chat_message(
+    request: Request,
     body: UserMessageInput,
     db: Session = Depends(get_db),
     current_user: db_models.User = Depends(get_current_user),
@@ -229,13 +237,12 @@ async def send_chat_message(
         return assistant_msg
     except Exception as e:
         db.rollback()
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to generate advisor reply: {str(e)}")
+        logger.exception("CHAT_MESSAGE_FAILED | user_id=%s | error=%s", current_user.id, repr(e))
+        raise HTTPException(status_code=500, detail="Failed to generate advisor reply. Please try again.")
 
 
 class ExplorePathsRequest(BaseModel):
-    message: str
+    message: str = Field(..., max_length=4000)
     history: List[ChatMessageInput] = []
     confirm_new_roadmap: bool = False
 
@@ -248,7 +255,9 @@ class ExplorePathsResponse(BaseModel):
 
 
 @router.post("/explore-paths", response_model=ExplorePathsResponse)
+@limiter.limit("15/minute")
 async def explore_paths_chat_endpoint(
+    request: Request,
     body: ExplorePathsRequest,
     db: Session = Depends(get_db),
     current_user: db_models.User = Depends(get_current_user),
@@ -403,7 +412,10 @@ async def explore_paths_chat_endpoint(
                     db.commit()
                     db.refresh(new_roadmap)
                 except Exception as e:
-                    print(f"Failed to generate outline for new roadmap: {e}")
+                    logger.exception(
+                        "EXPLORE_PATHS_NEW_ROADMAP_OUTLINE_FAILED | user_id=%s | roadmap_id=%s | error=%s",
+                        current_user.id, new_roadmap.id, repr(e),
+                    )
 
                 roadmap_updated = True
                 updated_roadmap_data = {
@@ -423,6 +435,5 @@ async def explore_paths_chat_endpoint(
         )
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Explore paths error: {str(e)}")
+        logger.exception("EXPLORE_PATHS_FAILED | user_id=%s | error=%s", current_user.id, repr(e))
+        raise HTTPException(status_code=500, detail="Failed to process your request. Please try again.")

@@ -59,51 +59,11 @@ export const API_URL =
     ? "/api"
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-/**
- * Perform an authenticated fetch with automatic silent token refresh.
- *
- * - All requests use credentials: "include" so HTTP-Only cookies are sent automatically.
- * - On a 401 response the function calls POST /auth/refresh once.
- * - If the refresh succeeds the original request is retried.
- * - If the refresh fails (expired session) the user is redirected to /auth/login.
- */
-export async function apiFetch(
-  input: string,
-  init: RequestInit = {},
-  onUnauthorized?: () => void
-): Promise<Response> {
-  const mergedInit: RequestInit = {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-  };
-
-  let response = await fetch(`${API_URL}${input}`, mergedInit);
-
-  if (response.status === 401) {
-    // Attempt silent token refresh
-    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (refreshRes.ok) {
-      // Retry the original request with fresh cookies
-      response = await fetch(`${API_URL}${input}`, mergedInit);
-    } else {
-      // Refresh failed — session is fully expired, redirect to login
-      onUnauthorized?.();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login";
-      }
-    }
-  }
-
-  return response;
-}
+// NOTE: The authenticated-fetch-with-silent-refresh implementation lives in
+// lib/api.ts (`apiFetch`) and is the single source of truth for that logic.
+// A second, diverging copy used to live here; it was never imported anywhere
+// in the app (only `useAuth`/`AuthProvider` from this file are used), so it
+// was removed rather than kept in sync with lib/api.ts.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);

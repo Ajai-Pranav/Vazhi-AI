@@ -66,12 +66,20 @@ async def bg_generate_outline(
         logger.info("BG_GENERATE_OUTLINE_COMPLETED | roadmap_id=%s", roadmap_id)
     except Exception as e:
         db.rollback()
+        db.close()
         logger.exception("BG_GENERATE_OUTLINE_FAILED | roadmap_id=%s | error=%s", roadmap_id, repr(e))
-        roadmap = db.query(db_models.Roadmap).filter(db_models.Roadmap.id == roadmap_id).first()
-        if roadmap:
-            roadmap.generation_status = "failed"
-            roadmap.generation_error = str(e)
-            db.commit()
+        # Use a fresh session for the failure-state update — the session above
+        # was just rolled back and its identity map may be stale.
+        recovery_db = SessionLocal()
+        try:
+            roadmap = recovery_db.query(db_models.Roadmap).filter(db_models.Roadmap.id == roadmap_id).first()
+            if roadmap:
+                roadmap.generation_status = "failed"
+                roadmap.generation_error = str(e)
+                recovery_db.commit()
+        finally:
+            recovery_db.close()
+        return
     finally:
         db.close()
 
@@ -129,13 +137,21 @@ async def bg_generate_day(
         logger.info("BG_GENERATE_DAY_COMPLETED | roadmap_id=%s | day=%d", roadmap_id, day_number)
     except Exception as e:
         db.rollback()
+        db.close()
         logger.exception("BG_GENERATE_DAY_FAILED | roadmap_id=%s | day=%d | error=%s", roadmap_id, day_number, repr(e))
-        roadmap = db.query(db_models.Roadmap).filter(db_models.Roadmap.id == roadmap_id).first()
-        if roadmap:
-            days_status = dict(roadmap.days_status or {})
-            days_status[str(day_number)] = "failed"
-            roadmap.days_status = days_status
-            db.commit()
+        # Use a fresh session for the failure-state update — the session above
+        # was just rolled back and its identity map may be stale.
+        recovery_db = SessionLocal()
+        try:
+            roadmap = recovery_db.query(db_models.Roadmap).filter(db_models.Roadmap.id == roadmap_id).first()
+            if roadmap:
+                days_status = dict(roadmap.days_status or {})
+                days_status[str(day_number)] = "failed"
+                roadmap.days_status = days_status
+                recovery_db.commit()
+        finally:
+            recovery_db.close()
+        return
     finally:
         db.close()
 

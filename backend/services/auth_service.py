@@ -17,7 +17,9 @@ load_dotenv()
 
 logger = logging.getLogger("VazhiAI.auth_service")
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "VazhiAI-super-secret-key-change-in-production")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is not set. Please configure it in your .env file.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30          # Short-lived access token (30 min)
 REFRESH_TOKEN_EXPIRE_DAYS = 30            # Long-lived refresh token (30 days)
@@ -45,7 +47,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -97,11 +99,11 @@ def rotate_refresh_token(
     raw_old_token: str,
     db: Session,
     request: Optional[Request] = None,
-) -> Tuple[str, str]:
+) -> Tuple[str, str, "db_models.User"]:
     """
     Validate the old refresh token, revoke it, issue a new access + refresh token pair.
     Raises HTTP 401 if the token is invalid, expired, or revoked.
-    Returns (new_access_token, new_raw_refresh_token).
+    Returns (new_access_token, new_raw_refresh_token, user).
     """
     old_hash = _hash_token(raw_old_token)
     now = datetime.now(timezone.utc)
