@@ -603,7 +603,7 @@ export default function DashboardPage() {
       >
         <div className="px-5 py-6 mb-2" style={{ borderBottom: "0.5px solid var(--border)" }}>
           <div className="text-lg font-extrabold mb-2" style={{ fontFamily: "var(--font-syne)", color: "var(--text)" }}>
-            Path<span style={{ color: "var(--accent)" }}>AI</span>
+            Vazhi<span style={{ color: "var(--accent)" }}>AI</span>
           </div>
           <button
             onClick={() => { setNavLoading(true); router.push("/home"); }}
