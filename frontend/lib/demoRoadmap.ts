@@ -92,7 +92,7 @@ export const demoDayDetails: Record<number, DayRoadmapDetails> = {
     ],
     practice: [
       { problem: "Sum of Two Numbers", platform: "HackerRank", difficulty: "Easy", link: "https://www.hackerrank.com/domains/java" },
-      { problem: "FizzBuzz", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problemset/?search=fizz+buzz" },
+      { problem: "FizzBuzz", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problems/fizz-buzz/description/" },
     ],
     mcqTest: [
       { question: "What is the default value of an uninitialized local variable in Java?", options: ["A) 0", "B) null", "C) It must be initialized before use", "D) Depends on the IDE"], answer: "C", difficulty: "Easy" },
@@ -159,7 +159,7 @@ export const demoDayDetails: Record<number, DayRoadmapDetails> = {
       { type: "practice", title: "LeetCode — Problem Set", link: "https://leetcode.com/problemset/" },
     ],
     practice: [
-      { problem: "Two Sum", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problemset/?search=two+sum" },
+      { problem: "Two Sum", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problems/two-sum/description/" },
       { problem: "Reverse a String In-Place", platform: "HackerRank", difficulty: "Easy", link: "https://www.hackerrank.com/domains/algorithms?filters%5Bsubdomains%5D[]=warmup" },
     ],
     mcqTest: [
@@ -194,7 +194,7 @@ export const demoDayDetails: Record<number, DayRoadmapDetails> = {
     ],
     practice: [
       { problem: "Merge Sort Implementation", platform: "GeeksforGeeks", difficulty: "Medium", link: "https://www.geeksforgeeks.org/explore?page=1&search=merge+sort" },
-      { problem: "Binary Search", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problemset/?search=binary+search" },
+      { problem: "Binary Search", platform: "LeetCode", difficulty: "Easy", link: "https://leetcode.com/problems/binary-search/description/" },
     ],
     mcqTest: [
       { question: "What is the average-case time complexity of Quick Sort?", options: ["A) O(n)", "B) O(n log n)", "C) O(n²)", "D) O(log n)"], answer: "B", difficulty: "Easy" },
@@ -228,7 +228,7 @@ export const demoDayDetails: Record<number, DayRoadmapDetails> = {
     ],
     practice: [
       { problem: "Employee–Department JOIN Queries", platform: "HackerRank", difficulty: "Medium", link: "https://www.hackerrank.com/domains/sql" },
-      { problem: "Second Highest Salary", platform: "LeetCode", difficulty: "Medium", link: "https://leetcode.com/problemset/?search=second+highest+salary" },
+      { problem: "Second Highest Salary", platform: "LeetCode", difficulty: "Medium", link: "https://leetcode.com/problems/second-highest-salary/description/" },
     ],
     mcqTest: [
       { question: "Which SQL clause is used to filter grouped results?", options: ["A) WHERE", "B) HAVING", "C) ORDER BY", "D) LIMIT"], answer: "B", difficulty: "Easy" },

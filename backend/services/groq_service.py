@@ -33,7 +33,6 @@ groq_retry = retry(
     retry=retry_if_exception_type((
         json.JSONDecodeError,
         ValidationError,
-        ValueError,
         GroqError
     )),
     stop=stop_after_attempt(3),
@@ -63,14 +62,237 @@ def _extract_json(raw: str) -> dict | list:
     raise json.JSONDecodeError("No valid JSON found in LLM response", raw, 0)
 
 
+# ── Curated problem-title → verified-slug maps ────────────────────────────────
+# The LLM is not reliable at generating correct deep-link slugs (it hallucinates
+# plausible-looking but broken /problems/<slug> URLs), which is why links were
+# previously downgraded to generic keyword-search pages. That's safe but lands
+# the user on a search results list instead of the specific problem.
+#
+# For the small set of extremely well-known, stable practice problems below —
+# the classic interview questions the AI is instructed to prefer — we know the
+# exact, verified slug, so we can link straight to the problem page instead of
+# a search. Anything NOT in these tables (less common/obscure problems) still
+# safely falls back to the search/category page, exactly as before, rather
+# than guessing a slug that might 404.
+LEETCODE_PROBLEM_SLUGS = {
+    # Arrays & Hashing
+    "two sum": "two-sum",
+    "contains duplicate": "contains-duplicate",
+    "valid anagram": "valid-anagram",
+    "group anagrams": "group-anagrams",
+    "top k frequent elements": "top-k-frequent-elements",
+    "product of array except self": "product-of-array-except-self",
+    "valid sudoku": "valid-sudoku",
+    "longest consecutive sequence": "longest-consecutive-sequence",
+    "majority element": "majority-element",
+    "missing number": "missing-number",
+    "rotate array": "rotate-array",
+    "intersection of two arrays": "intersection-of-two-arrays",
+    "intersection of two arrays ii": "intersection-of-two-arrays-ii",
+    "single number": "single-number",
+    # Two Pointers / Sliding Window
+    "valid palindrome": "valid-palindrome",
+    "3sum": "3sum",
+    "container with most water": "container-with-most-water",
+    "trapping rain water": "trapping-rain-water",
+    "best time to buy and sell stock": "best-time-to-buy-and-sell-stock",
+    "longest substring without repeating characters": "longest-substring-without-repeating-characters",
+    "longest repeating character replacement": "longest-repeating-character-replacement",
+    "minimum window substring": "minimum-window-substring",
+    "minimum size subarray sum": "minimum-size-subarray-sum",
+    # Stack
+    "valid parentheses": "valid-parentheses",
+    "min stack": "min-stack",
+    "evaluate reverse polish notation": "evaluate-reverse-polish-notation",
+    "generate parentheses": "generate-parentheses",
+    "daily temperatures": "daily-temperatures",
+    "largest rectangle in histogram": "largest-rectangle-in-histogram",
+    # Binary Search
+    "binary search": "binary-search",
+    "search a 2d matrix": "search-a-2d-matrix",
+    "koko eating bananas": "koko-eating-bananas",
+    "find minimum in rotated sorted array": "find-minimum-in-rotated-sorted-array",
+    "search in rotated sorted array": "search-in-rotated-sorted-array",
+    "median of two sorted arrays": "median-of-two-sorted-arrays",
+    # Linked List
+    "reverse linked list": "reverse-linked-list",
+    "merge two sorted lists": "merge-two-sorted-lists",
+    "reorder list": "reorder-list",
+    "remove nth node from end of list": "remove-nth-node-from-end-of-list",
+    "copy list with random pointer": "copy-list-with-random-pointer",
+    "add two numbers": "add-two-numbers",
+    "linked list cycle": "linked-list-cycle",
+    "merge k sorted lists": "merge-k-sorted-lists",
+    "reverse nodes in k-group": "reverse-nodes-in-k-group",
+    "palindrome linked list": "palindrome-linked-list",
+    # Trees
+    "invert binary tree": "invert-binary-tree",
+    "maximum depth of binary tree": "maximum-depth-of-binary-tree",
+    "diameter of binary tree": "diameter-of-binary-tree",
+    "balanced binary tree": "balanced-binary-tree",
+    "same tree": "same-tree",
+    "subtree of another tree": "subtree-of-another-tree",
+    "lowest common ancestor of a binary search tree": "lowest-common-ancestor-of-a-binary-search-tree",
+    "binary tree level order traversal": "binary-tree-level-order-traversal",
+    "validate binary search tree": "validate-binary-search-tree",
+    "kth smallest element in a bst": "kth-smallest-element-in-a-bst",
+    "construct binary tree from preorder and inorder traversal": "construct-binary-tree-from-preorder-and-inorder-traversal",
+    "binary tree maximum path sum": "binary-tree-maximum-path-sum",
+    "serialize and deserialize binary tree": "serialize-and-deserialize-binary-tree",
+    "symmetric tree": "symmetric-tree",
+    "binary tree inorder traversal": "binary-tree-inorder-traversal",
+    # Tries
+    "implement trie (prefix tree)": "implement-trie-prefix-tree",
+    "design add and search words data structure": "design-add-and-search-words-data-structure",
+    "word search ii": "word-search-ii",
+    # Heap / Priority Queue
+    "kth largest element in an array": "kth-largest-element-in-an-array",
+    "find median from data stream": "find-median-from-data-stream",
+    "task scheduler": "task-scheduler",
+    # Backtracking
+    "subsets": "subsets",
+    "subsets ii": "subsets-ii",
+    "combination sum": "combination-sum",
+    "permutations": "permutations",
+    "word search": "word-search",
+    "palindrome partitioning": "palindrome-partitioning",
+    "letter combinations of a phone number": "letter-combinations-of-a-phone-number",
+    "n-queens": "n-queens",
+    # Graphs
+    "number of islands": "number-of-islands",
+    "clone graph": "clone-graph",
+    "course schedule": "course-schedule",
+    "course schedule ii": "course-schedule-ii",
+    "pacific atlantic water flow": "pacific-atlantic-water-flow",
+    "redundant connection": "redundant-connection",
+    "word ladder": "word-ladder",
+    "network delay time": "network-delay-time",
+    # Dynamic Programming
+    "climbing stairs": "climbing-stairs",
+    "house robber": "house-robber",
+    "house robber ii": "house-robber-ii",
+    "longest palindromic substring": "longest-palindromic-substring",
+    "palindromic substrings": "palindromic-substrings",
+    "decode ways": "decode-ways",
+    "coin change": "coin-change",
+    "maximum product subarray": "maximum-product-subarray",
+    "word break": "word-break",
+    "longest increasing subsequence": "longest-increasing-subsequence",
+    "partition equal subset sum": "partition-equal-subset-sum",
+    "unique paths": "unique-paths",
+    "longest common subsequence": "longest-common-subsequence",
+    "edit distance": "edit-distance",
+    # Greedy
+    "maximum subarray": "maximum-subarray",
+    "jump game": "jump-game",
+    "jump game ii": "jump-game-ii",
+    "gas station": "gas-station",
+    # Intervals
+    "insert interval": "insert-interval",
+    "merge intervals": "merge-intervals",
+    "non-overlapping intervals": "non-overlapping-intervals",
+    # Math & Geometry
+    "rotate image": "rotate-image",
+    "spiral matrix": "spiral-matrix",
+    "set matrix zeroes": "set-matrix-zeroes",
+    "happy number": "happy-number",
+    "plus one": "plus-one",
+    "multiply strings": "multiply-strings",
+    "fizz buzz": "fizz-buzz",
+    # Bit Manipulation
+    "number of 1 bits": "number-of-1-bits",
+    "counting bits": "counting-bits",
+    "reverse bits": "reverse-bits",
+    "sum of two integers": "sum-of-two-integers",
+    "fizz buzz": "fizz-buzz",
+    "fizzbuzz": "fizz-buzz",  # LLMs/authors often write this as one word
+    # SQL
+    "second highest salary": "second-highest-salary",
+}
+
+HACKERRANK_PROBLEM_SLUGS = {
+    "solve me first": "solve-me-first",
+    "simple array sum": "simple-array-sum",
+    "compare the triplets": "compare-the-triplets",
+    "a very big sum": "a-very-big-sum",
+    "diagonal difference": "diagonal-difference",
+    "plus minus": "plus-minus",
+    "staircase": "staircase",
+    "mini-max sum": "mini-max-sum",
+    "birthday cake candles": "birthday-cake-candles",
+    "time conversion": "time-conversion",
+    "grading students": "grading-students",
+    "apple and orange": "apple-and-orange",
+    "kangaroo": "kangaroo",
+    "between two sets": "between-two-sets",
+    "migratory birds": "migratory-birds",
+    "day of the programmer": "day-of-the-programmer",
+    "sock merchant": "sock-merchant",
+    "drawing book": "drawing-book",
+    "counting valleys": "counting-valleys",
+    "electronics shop": "electronics-shop",
+    "cats and a mouse": "cats-and-a-mouse",
+    "picking numbers": "picking-numbers",
+    "climbing the leaderboard": "climbing-the-leaderboard",
+    "the hurdle race": "the-hurdle-race",
+    "designer pdf viewer": "designer-pdf-viewer",
+    "utopian tree": "utopian-tree",
+    "angry professor": "angry-professor",
+}
+
+
+def _normalize_problem_title(title: str) -> str:
+    """Lowercase + collapse whitespace/punctuation for dictionary lookups."""
+    import re as _re
+    return _re.sub(r"\s+", " ", (title or "").strip().lower())
+
+
+def _build_practice_link(problem_title: str, platform: str, fallback_url: str = "") -> str:
+    """
+    Build the link for a practice problem, preferring a direct link to the
+    EXACT problem page over a generic keyword-search page.
+
+    If the problem is one of our verified classics, link straight to it.
+    Otherwise, fall back to the existing safe search/category page — we
+    deliberately do not guess an unverified slug, since a wrong guess is a
+    dead 404, which is worse than a search page.
+    """
+    import urllib.parse
+
+    key = _normalize_problem_title(problem_title)
+    platform_l = (platform or "").strip().lower()
+
+    if "leetcode" in platform_l:
+        slug = LEETCODE_PROBLEM_SLUGS.get(key)
+        if slug:
+            return f"https://leetcode.com/problems/{slug}/description/"
+        return f"https://leetcode.com/problemset/?search={urllib.parse.quote_plus(problem_title)}"
+
+    if "hackerrank" in platform_l:
+        slug = HACKERRANK_PROBLEM_SLUGS.get(key)
+        if slug:
+            return f"https://www.hackerrank.com/challenges/{slug}/problem"
+        return "https://www.hackerrank.com/domains/algorithms"
+
+    if "geeksforgeeks" in platform_l or platform_l == "gfg":
+        return f"https://www.geeksforgeeks.org/explore?page=1&search={urllib.parse.quote_plus(problem_title)}"
+
+    if "codeforces" in platform_l:
+        return "https://codeforces.com/problemset"
+
+    # Unknown/"Other" platform — keep whatever safe URL was already produced
+    return fallback_url
+
+
 def _sanitize_day_links(data: dict) -> dict:
     """
     Post-process LLM day output to ensure all links are safe and working.
 
     Strategies applied:
     - YouTube: any non-search YouTube URL is converted to a search URL using the resource title.
-    - LeetCode: any deep problem URL (e.g. /problems/<slug>) is replaced with a search URL.
-    - HackerRank: any deep challenge URL is replaced with a domain/category URL.
+    - LeetCode / HackerRank: practice problems matching a verified title in
+      LEETCODE_PROBLEM_SLUGS / HACKERRANK_PROBLEM_SLUGS link straight to that
+      exact problem page; everything else keeps the safe search/category link.
     - GeeksforGeeks: any deep article URL is replaced with a search explore URL.
     - Codeforces: any deep problem URL is replaced with a search URL.
     """
@@ -116,12 +338,15 @@ def _sanitize_day_links(data: dict) -> dict:
                 resource.get("title", "")
             )
 
-    # Sanitize practice problem links
+    # Sanitize practice problem links — prefer a direct link to the exact
+    # problem (via the curated slug tables) over a generic keyword search.
     for problem in data.get("practice", []):
         if isinstance(problem, dict):
-            problem["link"] = _fix_url(
-                problem.get("link", ""),
-                problem.get("problem", "")
+            safe_url = _fix_url(problem.get("link", ""), problem.get("problem", ""))
+            problem["link"] = _build_practice_link(
+                problem.get("problem", ""),
+                problem.get("platform", ""),
+                fallback_url=safe_url,
             )
 
     return data
@@ -253,7 +478,10 @@ async def generate_roadmap_outline(
         if isinstance(data, dict) and "outline" in data:
             data = data["outline"]
         else:
-            raise ValueError("Roadmap outline response must be a JSON array.")
+            raise ValidationError.from_exception_data(
+                "Roadmap outline response must be a JSON array.",
+                line_errors=[]
+            )
 
     # Validate each item matches the schema
     TypeAdapter(list[RoadmapOutlineItem]).validate_python(data)
@@ -388,7 +616,10 @@ async def explore_paths_chat(
 
     # Basic validations
     if not isinstance(data, dict) or "reply" not in data or "intent" not in data:
-        raise ValueError("Explore paths response is missing required fields (reply/intent).")
+        raise ValidationError.from_exception_data(
+            "Explore paths response is missing required fields (reply/intent).",
+            line_errors=[]
+        )
     return data
 
 
