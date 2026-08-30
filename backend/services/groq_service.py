@@ -24,7 +24,7 @@ from services.prompt_engine import (
 logger = logging.getLogger("VazhiAI.groq_service")
 
 client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 # ── Robust Retry Decorator using Tenacity ─────────────────────────────────────
 # Retries up to 3 times on JSON errors, validation errors, or Groq API rate limits/timeouts.
